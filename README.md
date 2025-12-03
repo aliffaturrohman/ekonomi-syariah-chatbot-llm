@@ -1,5 +1,5 @@
 # ekonomi-syariah-chatbot-llm
-```
+
 EKONOMI-SYARIAH-CHATBOT-LLM
 │
 ├── .env                     # Kunci API (HuggingFace Token, OpenAI, dll)
@@ -51,4 +51,3 @@ EKONOMI-SYARIAH-CHATBOT-LLM
     ├── 02_dataset_builder_test.ipynb  # [RAFT] Eksperimen membuat data training
     ├── 03_finetuning_test.ipynb       # [RAFT] Eksperimen training loop
     └── 04_inference_test.ipynb        # Menguji RAG chain dengan model yang sudah di-tune
-```
