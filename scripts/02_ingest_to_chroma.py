@@ -1,22 +1,73 @@
 import os
+import shutil
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
+from tqdm import tqdm
 
-INPUT_MD_DIR = "../data/processed/markdown_converted_from_pdf" 
+# --- KONFIGURASI BARU ---
+# Folder tempat file Markdown BARU berada
+INPUT_MD_DIR = "../data/processed/02_cleaning_markdown_text_heading" 
+
+# Lokasi Database
 DB_DIR = "../vector_store/chroma_db"
 COLLECTION_NAME = "ekonomi_syariah_dataset"
 EMBEDDING_MODEL_NAME = "intfloat/multilingual-e5-large"
 
-def ingest_to_database(INPUT_MD_PATH, DB_DIR, COLLECTION_NAME):
-    if not os.path.exists(INPUT_MD_PATH):
-        print(f"File tidak ditemukan: {INPUT_MD_PATH}")
+def reset_database():
+    """Fungsi untuk menghapus database lama agar bersih."""
+    if os.path.exists(DB_DIR):
+        print(f"🗑️  MENGHAPUS Database lama di: {DB_DIR} ...")
+        try:
+            shutil.rmtree(DB_DIR) # Hapus folder beserta isinya
+            print("   ✅ Database lama berhasil dihapus.")
+        except Exception as e:
+            print(f"   ⚠️ Gagal menghapus database: {e}")
+    else:
+        print("   ℹ️ Database belum ada, akan dibuat baru.")
+
+def ingest_to_database(file_path, embedding_model):
+    """Memproses satu file MD dan memasukkannya ke DB."""
+    if not os.path.exists(file_path):
+        return 0
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        clean_text = f.read()
+
+    # Chunking Config
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=2000,
+        chunk_overlap=400,
+        separators=["\n\n", "\n#", "\n1. ", "\n- ", ". ", " ", ""],
+        keep_separator=True
+    )
+
+    chunks = text_splitter.split_text(clean_text)
+    
+    # Masukkan metadata source agar kita tahu ini dari file mana
+    docs = [Document(page_content=c, metadata={"source": file_path}) for c in chunks]
+
+    # Simpan ke Chroma (Append mode, karena DB-nya sudah di-reset di awal main)
+    vectorstore = Chroma.from_documents(
+        documents=docs,
+        embedding=embedding_model,
+        persist_directory=DB_DIR,
+        collection_name=COLLECTION_NAME
+    )
+    
+    return len(docs)
+
+def main():
+    # 1. Reset Database Dulu (Wajib biar data gak numpuk)
+    reset_database()
+
+    # 2. Cek Folder Input
+    if not os.path.exists(INPUT_MD_DIR):
+        print(f"❌ Folder input tidak ditemukan: {INPUT_MD_DIR}")
         return
 
-    with open(INPUT_MD_PATH, "r", encoding="utf-8") as f:
-        clean_text = f.read()
-        
+    # 3. Load Model Embedding (Sekali saja biar cepet)
     print(f"⚙️  Memuat Model Embedding: {EMBEDDING_MODEL_NAME}")
     embeddings = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL_NAME,
@@ -24,48 +75,25 @@ def ingest_to_database(INPUT_MD_PATH, DB_DIR, COLLECTION_NAME):
         encode_kwargs={'normalize_embeddings': True}
     )
 
-    print("Chunking text")
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=2000,
-        chunk_overlap=400,
-        separators=[
-            "\n\n",
-            "\n#",
-            "\n1. ",
-            "\n- ",
-            "\n* ",
-            "\n   a. ",
-            ". ",
-            " ",
-            ""
-        ],
-        keep_separator=True
-    )
+    # 4. Loop Semua File Markdown di Folder Baru
+    files = [f for f in os.listdir(INPUT_MD_DIR) if f.endswith(".md")]
+    
+    if not files:
+        print(f"⚠️ Tidak ada file .md di {INPUT_MD_DIR}")
+        return
 
-    chunks = text_splitter.split_text(clean_text)
-    docs = [Document(page_content=c, metadata={"source": INPUT_MD_PATH}) for c in chunks]
+    print(f"🚀 Memulai Ingest untuk {len(files)} file...")
     
-    print(f"   Terbentuk {len(docs)} potongan (chunks).")
-    print(f"💾 Menyimpan Vector ke ChromaDB di folder: {DB_DIR}")
+    total_chunks = 0
+    for filename in tqdm(files, desc="Processing Files"):
+        file_path = os.path.join(INPUT_MD_DIR, filename)
+        num_chunks = ingest_to_database(file_path, embeddings)
+        total_chunks += num_chunks
     
-    if os.path.exists(DB_DIR):
-        print("⚠️ Database lama terdeteksi. Data baru akan ditambahkan (append).")
-    
-    vectorstore = Chroma.from_documents(
-        documents=docs,
-        embedding=embeddings,
-        persist_directory=DB_DIR,
-        collection_name=COLLECTION_NAME
-    )
-    
-    print("✅ Selesai! Data buku sudah masuk ke Vector Database.")
-    print("   Siap untuk tahap selanjutnya: Generate RAFT Dataset.")
-
-def main():
-    for filename in os.listdir(INPUT_MD_DIR):
-        if filename.endswith(".md"):
-            input_md_path = os.path.join(INPUT_MD_DIR, filename)
-            ingest_to_database(input_md_path, DB_DIR, COLLECTION_NAME)
+    print("\n" + "="*40)
+    print(f"✅ SELESAI! Total {total_chunks} potongan teks masuk ke Database.")
+    print(f"📂 Lokasi DB: {DB_DIR}")
+    print("="*40)
 
 if __name__ == "__main__":
-    ingest_to_database("../data/processed/02_cleaning_markdown_text_heading/Ekonomi Syariah E-Book [UINSA]_Bab_1_[12-26].md", DB_DIR, COLLECTION_NAME)
+    main()

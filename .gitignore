@@ -1,1 +1,8 @@
 /venv
+/app/*.json
+/app/*.log
+/app/__pycache__/
+.env
+/scripts/*/
+/vector_store
+/models
