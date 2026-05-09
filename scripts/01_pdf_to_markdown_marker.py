@@ -3,7 +3,7 @@ from marker.converters.pdf import PdfConverter
 from marker.models import create_model_dict
 from marker.output import text_from_rendered
 
-PDF_DIR = "../data/raw/pdf_processed"
+PDF_DIR = "../data/raw/pdf"
 OUTPUT_DIR = "../data/processed/markdown_converted_from_pdf"
 
 def extract_pdf(PDF_PATH, OUTPUT_DIR):
@@ -15,14 +15,18 @@ def extract_pdf(PDF_PATH, OUTPUT_DIR):
     file_name = os.path.basename(PDF_PATH).replace(".pdf", ".md")
     output_path = os.path.join(OUTPUT_DIR, file_name)
 
-    
+    # Periksa jika file sudah ada untuk menghindari proses ulang yang lama
+    if os.path.exists(output_path):
+        print(f"⏩ Skip: {file_name} sudah diproses.")
+        return
+
     config_dict = {
         "output_format": "markdown",
         "languages": "id,ar",
         "disable_multiprocessing": False
     }
     
-    print(" Loading Models")
+    print(f"🚀 Memproses: {file_name}")
     model_dict = create_model_dict()
     
     converter = PdfConverter(
@@ -32,24 +36,26 @@ def extract_pdf(PDF_PATH, OUTPUT_DIR):
         renderer=model_dict.get("renderer")
     )
 
-    print(f"Start analyzing layout for: {file_name}")
     try:
         rendered = converter(PDF_PATH)
-        
-        print("Extracting text")
         text, _, images = text_from_rendered(rendered)
 
-        print("Saving output file")
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(text)
             
-        print(f"Done! Check file in: {os.path.abspath(output_path)}")
+        print(f"✅ Selesai: {file_name}")
         
     except Exception as e:
-        print(f"Terjadi Error saat konversi: {e}")
+        print(f"❌ Error {file_name}: {e}")
 
 def main():
-    pdf_files = [f for f in os.listdir(PDF_DIR) if f.endswith(".pdf")]
+    if not os.path.exists(PDF_DIR):
+        print(f"❌ Folder PDF tidak ditemukan: {PDF_DIR}")
+        return
+        
+    pdf_files = sorted([f for f in os.listdir(PDF_DIR) if f.endswith(".pdf")])
+    print(f"📚 Ditemukan {len(pdf_files)} file PDF di {PDF_DIR}")
+    
     for pdf_file in pdf_files:
         pdf_path = os.path.join(PDF_DIR, pdf_file)
         extract_pdf(pdf_path, OUTPUT_DIR)
