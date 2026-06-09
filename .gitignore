@@ -1,1 +1,17 @@
 /venv
+/app/*.json
+/app/*.log
+/app/__pycache__/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env.log
+*.env.bak
+/scripts/*/
+/vector_store
+/models
+/outputs_*/
+/unsloth_compiled_cache/
+/*.log
