@@ -1,49 +1,181 @@
-# Ekonomi Syariah Chatbot LLM (HANIF)
+# 🕌 HANIF: Asisten Ekonomi Syariah (Helpful AI for Noble Islamic Finance)
 
-Proyek ini bertujuan untuk membangun asisten AI spesialis Ekonomi Syariah (HANIF) menggunakan teknik **RAFT (Retrieval-Augmented Fine-Tuning)**. Model dilatih untuk memberikan jawaban yang akurat berdasarkan dokumen referensi dengan proses penalaran (Chain-of-Thought).
-
-## 🚀 Alur Kerja (Pipeline)
-
-### 1. Preprocessing Data
-- `scripts/01_pdf_to_markdown_marker.py`: Mengonversi dokumen PDF mentah menjadi format Markdown menggunakan library `marker`.
-- `scripts/01b_llm_cleaning.py`: Membersihkan teks hasil konversi menggunakan LLM (Qwen2.5) untuk memperbaiki struktur heading, tabel, dan membuang teks sampah (noise).
-
-### 2. Manajemen Basis Data Vektor
-- `scripts/02_ingest_to_chroma.py`: Memecah dokumen menjadi potongan kecil (chunking) dan menyimpannya ke dalam **ChromaDB** menggunakan embedding `multilingual-e5-large`.
-- `scripts/02b_check_database_chroma.py`: Alat bantu untuk memverifikasi jumlah data dan isi koleksi di database vektor.
-
-### 3. Pembuatan Dataset (RAFT)
-- `scripts/03_generate_dataset.py`: **Inti dari proyek.** Script ini menghasilkan dataset SFT (Supervised Fine-Tuning) dengan format RAFT.
-    - Mengambil 1 dokumen asli (Oracle) dan 3 dokumen pengalih (Distractors).
-    - Meminta LLM membuat pertanyaan, proses berpikir (`<thought>`), dan jawaban.
-- `scripts/03b_create_master_dataset.py`: Menggabungkan berbagai file JSONL hasil generate menjadi satu file `master_dataset.jsonl` untuk pelatihan.
-
-### 4. Pelatihan Model (Fine-Tuning)
-- `scripts/04_train_model.py`: Melakukan fine-tuning model (misal: Llama 3 atau Qwen) menggunakan library `Unsloth` untuk efisiensi VRAM. Menggunakan teknik LoRA/QLoRA.
-- `scripts/05_export_to_gguf.py`: Mengekspor model hasil latih ke format **GGUF** agar bisa dijalankan di Ollama atau perangkat lokal lainnya.
-
-### 5. Aplikasi & Inferensi
-- `app/main.py`: Entry point aplikasi.
-- `app/graph.py`: Logika alur percakapan (state machine) menggunakan LangGraph.
-- `app/db.py` & `app/app.py`: Integrasi database dan UI (Streamlit).
+HANIF adalah sistem asisten AI pakar Ekonomi Syariah yang dibangun menggunakan teknik **RAFT (Retrieval-Augmented Fine-Tuning)**. Proyek ini menggabungkan kekuatan **RAG (Retrieval-Augmented Generation)** dengan **Fine-Tuning** model bahasa (LLM) untuk memberikan jawaban yang akurat, berbasis literatur, dan memiliki alur penalaran (**Chain-of-Thought**) yang transparan.
 
 ---
 
-## 🧐 Evaluasi Metodologi (Analisis Script 03)
+## 🌟 Fitur Utama
 
-Berikut adalah penilaian teknis terhadap sistem pembuatan dataset yang digunakan:
-
-### ✅ Kelebihan (Good)
-1. **Implementasi RAFT Sesuai Standar:** Penggunaan Oracle dan Distractors melatih model agar tahan terhadap informasi yang tidak relevan (noise) saat RAG.
-2. **Chain-of-Thought (CoT):** Adanya tag `<thought>` melatih model untuk melakukan penalaran sebelum menjawab, meningkatkan akurasi logika.
-3. **Hard Negatives:** Penggunaan *similarity search* untuk mencari distractor memastikan pengalih bersifat menantang, bukan sekadar teks acak.
-4. **Format ShareGPT:** Dataset siap digunakan langsung dengan library populer seperti Unsloth atau Axolotl.
-
-### 💡 Saran Perbaikan (Improve)
-1. **Kapasitas Teacher Model:** Penggunaan model 7B untuk generate dataset mungkin kurang tajam logikanya. Disarankan menggunakan model 14B+ atau 32B+ (via API atau GPU besar) untuk hasil dataset yang lebih berkualitas.
-2. **Skenario "Tanpa Jawaban":** Tambahkan sekitar 10-20% sampel yang hanya berisi *distractors* tanpa *oracle*, lalu latih model untuk menjawab "Informasi tidak ditemukan". Ini penting untuk mencegah halusinasi.
-3. **Variasi Pertanyaan:** Saat ini prompt berfokus pada pertanyaan faktual. Tambahkan instruksi untuk membuat pertanyaan berbasis perbandingan, sintesis, atau analisis kasus ekonomi.
-4. **Efisiensi Batching:** Untuk mempercepat proses, satu chunk bisa diminta untuk menghasilkan 2-3 variasi pertanyaan sekaligus dalam satu kali panggil LLM.
+- **Pipeline Data Canggih:** Konversi PDF ke Markdown dengan dukungan OCR (`surya-ocr`) dan pembersihan teks otomatis menggunakan LLM.
+- **Pakar Ekonomi Syariah (RAFT):** Model tidak hanya dilatih untuk menjawab, tapi juga dilatih untuk membedakan antara informasi yang relevan (*Oracle*) dan tidak relevan (*Distractors*) dalam konteks RAG.
+- **Chain-of-Thought (CoT):** Output model mencakup tag `<thought>` yang berisi proses analisis sebelum memberikan jawaban akhir.
+- **Efisiensi Tinggi:** Fine-tuning menggunakan **Unsloth** (LoRA/QLoRA) yang memungkinkan pelatihan model 7B pada GPU konsumen (misal: RTX 3060).
+- **Multi-Antarmuka:** Tersedia dalam bentuk Web App (Streamlit), API (FastAPI), dan CLI.
+- **Sinkronisasi Cloud:** Integrasi dengan Google Cloud Firestore untuk manajemen riwayat percakapan.
 
 ---
-*Dikembangkan untuk Tugas Akhir - Sistem Pakar Ekonomi Syariah.*
+
+## 🏗️ Arsitektur Sistem
+
+Proyek ini mengikuti alur kerja end-to-end mulai dari pengolahan data mentah hingga inferensi:
+
+1.  **Ingestion:** PDF -> Markdown -> Cleaning -> Vector Store (ChromaDB).
+2.  **Dataset Generation:** Pembuatan dataset RAFT menggunakan model *Teacher* (Ollama).
+3.  **Training:** Fine-tuning base model (Qwen 2.5 7B) menggunakan dataset RAFT.
+4.  **Export:** Konversi model ke format GGUF untuk deployment lokal.
+5.  **Inference:** RAG + CoT via Streamlit/FastAPI/CLI.
+
+---
+
+## 🛠️ Teknologi yang Digunakan
+
+| Kategori | Teknologi |
+| :--- | :--- |
+| **Base LLM** | Qwen 2.5 (7B / 14B) |
+| **Orchestration** | LangChain, LangGraph |
+| **Vector Database** | ChromaDB |
+| **Embeddings** | `intfloat/multilingual-e5-large` |
+| **Fine-Tuning** | Unsloth, LoRA, QLoRA, TRL |
+| **Data Processing** | Marker, Surya-OCR, PyPDF |
+| **Backend / UI** | FastAPI, Streamlit |
+| **Cloud DB** | Google Cloud Firestore |
+| **Inference Engine** | Ollama |
+
+---
+
+## 📁 Struktur Direktori
+
+```text
+ekonomi-syariah-chatbot-llm/
+├── app/                # Aplikasi Inferensi (API, Web, CLI, Logic)
+│   ├── app.py          # Dashboard Streamlit (Frontend Utama)
+│   ├── app_cli.py      # Antarmuka Command Line
+│   ├── main.py         # Backend FastAPI
+│   ├── graph.py        # State Machine Alur Chat (LangGraph)
+│   └── db.py           # Integrasi Firestore
+├── config/             # Konfigurasi sistem
+├── data/               # Penyimpanan Data
+│   ├── raw/            # PDF Mentah
+│   ├── processed/      # Hasil konversi Markdown & Cleaning
+│   └── dataset_training/ # Dataset RAFT hasil generate
+├── scripts/            # Script Pipeline (01-05)
+│   ├── 01_pdf_to_md.py # PDF to Markdown
+│   ├── 01b_cleaning.py # LLM Text Cleaning
+│   ├── 02_ingest.py    # Ingest ke ChromaDB
+│   ├── 03_generate.py  # RAFT Dataset Generator
+│   ├── 04_train.py     # Unsloth Fine-Tuning
+│   └── 05_export.py    # GGUF Export
+├── models/             # LoRA Adapters & GGUF Models
+├── notebooks/          # Eksperimen & Testing (Jupyter)
+├── vector_store/       # Database Vektor (ChromaDB)
+└── requirements.txt    # Daftar dependensi Python
+```
+
+---
+
+## 🚀 Panduan Penggunaan
+
+### 1. Instalasi & Persiapan
+Pastikan Anda memiliki Python 3.10+ dan CUDA yang terkonfigurasi.
+
+```bash
+# Clone repository
+git clone https://github.com/username/ekonomi-syariah-chatbot-llm.git
+cd ekonomi-syariah-chatbot-llm
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install Ollama (untuk inferensi lokal)
+# Kunjungi https://ollama.com
+```
+
+### 2. ⚡ Otomatisasi Training & Evaluasi (Unified Runner)
+Kami telah menyediakan script otomatisasi tunggal untuk mempermudah eksekusi training dan evaluasi model secara berantai.
+
+#### Cara Penggunaan (Linux/macOS):
+```bash
+# Jalankan antrean training model
+./run.sh --run training
+# atau
+./run.sh training
+
+# Jalankan evaluasi model yang baru selesai ditraining
+./run.sh --run evaluate
+# atau
+./run.sh evaluate
+```
+
+#### Cara Penggunaan (Windows):
+```cmd
+# Jalankan antrean training model
+run.bat --run training
+# atau
+run.bat training
+
+# Jalankan evaluasi model yang baru selesai ditraining
+run.bat --run evaluate
+# atau
+run.bat evaluate
+```
+
+#### ⚙️ Cara Kerja Otomatisasi:
+1. **Mode Training (`training`):**
+   - Mendeteksi spesifikasi VRAM GPU utama secara dinamis untuk menyetel `batch size` dan `gradient accumulation steps` yang aman (mencegah CUDA OOM pada GPU 12GB, 16GB, 24GB, atau lebih besar).
+   - Membaca antrean eksperimen dari `scripts/training_queue.json`.
+   - Jika suatu job mengalami kegagalan, pesan error akan disimpan pada `scripts/parameter_end_training.json`, dan script **tetap melanjutkan** eksekusi job berikutnya dalam antrean.
+2. **Mode Evaluasi (`evaluate`):**
+   - Membaca daftar training yang sukses dari `scripts/parameter_end_training.json`.
+   - Otomatis mencocokkan ketersediaan file hasil inferensi di direktori `eval_results_full/`.
+   - Mengecek apakah kombinasi model dan judge terpilih (default: direct DeepSeek API) sudah pernah dievaluasi sebelumnya (untuk menghindari duplikasi biaya API).
+   - Jika semua model baru sudah selesai dievaluasi, script akan menampilkan notifikasi:
+     `🔔 NOTIFIKASI: Semua evaluasi model sudah dijalankan!`
+
+---
+
+### 3. Pipeline Data Manual (Urutan Eksekusi)
+Jalankan script di folder `scripts/` secara berurutan:
+
+1.  **Ekstraksi Teks:** `python 01_pdf_to_markdown_marker.py`
+2.  **Pembersihan Teks:** `python 01b_llm_cleaning.py`
+3.  **Ingest ke Vector DB:** `python 02_ingest_to_chroma.py`
+4.  **Pembuatan Dataset RAFT:** `python 03_generate_dataset.py`
+5.  **Training:** `python 04_train_model.py`
+6.  **Export:** `python 05_export_to_gguf.py`
+
+### 4. Menjalankan Aplikasi
+Pilih antarmuka yang ingin digunakan:
+
+- **Web Dashboard:** `streamlit run app/app.py`
+- **API Server:** `uvicorn app.main:app --reload`
+- **Interactive CLI:** `python app/app_cli.py`
+
+---
+
+## 📄 Metodologi RAFT & CoT
+
+Sistem ini menggunakan format pesan khusus untuk memastikan akurasi:
+- **Konteks Oracle:** Informasi benar dari dokumen.
+- **Konteks Distractor:** Informasi pengalih yang mirip namun tidak relevan.
+- **Thought Process:** Model dilatih untuk menuliskan langkah logika dalam tag `<thought>` sebelum menjawab.
+
+**Contoh Output:**
+```text
+<thought>
+User menanyakan hukum asuransi syariah. 
+Berdasarkan [DOC 1] (Fatwa DSN-MUI No. 21), asuransi syariah menggunakan akad tabarru. 
+Saya akan menjelaskan perbedaan akad ini dengan asuransi konvensional.
+</thought>
+
+Asuransi syariah dalam Islam diperbolehkan asalkan menggunakan prinsip tolong-menolong (tabarru)...
+```
+
+---
+
+## ⚠️ Konfigurasi Tambahan
+
+- **Firestore:** Letakkan file `serviceAccountKey.json` di direktori `app/` untuk mengaktifkan sinkronisasi chat.
+- **Ollama:** Pastikan server Ollama berjalan di `localhost:11434` sebelum menjalankan aplikasi atau generator dataset.
+
+---
+*Dikembangkan untuk Tugas Akhir/Riset Sistem Pakar Ekonomi Syariah.*

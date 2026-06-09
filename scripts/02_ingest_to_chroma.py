@@ -7,89 +7,95 @@ from langchain_core.documents import Document
 from tqdm import tqdm
 
 # --- KONFIGURASI ---
-INPUT_MD_DIR = "../data/processed/markdown_converted_from_pdf"
-
-# Lokasi Database
-DB_DIR = "../vector_store/chroma_db"
+INPUT_MD_DIR = "data/processed/markdown_converted_from_pdf"
+DB_DIR = "vector_store/chroma_db"
 COLLECTION_NAME = "ekonomi_syariah_dataset"
 EMBEDDING_MODEL_NAME = "intfloat/multilingual-e5-large"
 
+def prepare_embeddings():
+    print(f"⏳ Loading Embedding Model: {EMBEDDING_MODEL_NAME}...")
+    # Menggunakan CUDA jika tersedia agar proses ingest cepat
+    import torch
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print(f"💻 Using device: {device}")
+    
+    model_kwargs = {'device': device} 
+    encode_kwargs = {'normalize_embeddings': True} # Penting untuk model E5
+    
+    return HuggingFaceEmbeddings(
+        model_name=EMBEDDING_MODEL_NAME,
+        model_kwargs=model_kwargs,
+        encode_kwargs=encode_kwargs
+    )
+
 def reset_database():
-    """Hapus database lama agar bersih."""
     if os.path.exists(DB_DIR):
-        print(f"🗑️  MENGHAPUS Database lama di: {DB_DIR} ...")
+        print(f"🗑️ Menghapus database lama di {DB_DIR}...")
         try:
             shutil.rmtree(DB_DIR)
-            print("   ✅ Database lama berhasil dihapus.")
+            print("✅ Database lama berhasil dihapus.")
         except Exception as e:
-            print(f"   ⚠️ Gagal menghapus database: {e}")
+            print(f"⚠️ Gagal menghapus database: {e}")
     else:
-        print("   ℹ️ Database belum ada, akan dibuat baru.")
+        print("ℹ️ Database belum ada, akan dibuat baru.")
 
-def ingest_to_database(file_path, embedding_model, vectorstore_exists=False):
-    """Memproses satu file MD dan memasukkannya ke DB."""
-    with open(file_path, "r", encoding="utf-8") as f:
-        text = f.read()
+def main():
+    if not os.path.exists(INPUT_MD_DIR):
+        print(f"❌ Folder input tidak ditemukan: {os.path.abspath(INPUT_MD_DIR)}")
+        return
 
+    reset_database()
+    embeddings = prepare_embeddings()
+    
+    # Setup Text Splitter
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
-        separators=["\n\n", "\n#", "\n1. ", "\n- ", ". ", " ", ""],
-        keep_separator=True
+        separators=["\n# ", "\n## ", "\n### ", "\n\n", "\n", ". ", " "]
     )
 
-    chunks = text_splitter.split_text(text)
-    docs = [Document(page_content=c, metadata={"source": os.path.basename(file_path)}) for c in chunks]
+    all_documents = []
+    file_list = [f for f in os.listdir(INPUT_MD_DIR) if f.endswith(".md")]
+    
+    if not file_list:
+        print(f"⚠️ Tidak ada file .md ditemukan di {INPUT_MD_DIR}")
+        return
 
-    if not vectorstore_exists:
+    print(f"📄 Membaca {len(file_list)} file markdown...")
+    for filename in tqdm(file_list, desc="Reading Files"):
+        file_path = os.path.join(INPUT_MD_DIR, filename)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                text = f.read()
+                
+            chunks = text_splitter.split_text(text)
+            for i, chunk in enumerate(chunks):
+                all_documents.append(
+                    Document(
+                        page_content=chunk,
+                        metadata={"source": filename, "chunk_id": i}
+                    )
+                )
+        except Exception as e:
+            print(f"❌ Gagal membaca {filename}: {e}")
+
+    if not all_documents:
+        print("⚠️ Tidak ada dokumen untuk diindeks.")
+        return
+
+    print(f"📦 Mengindeks {len(all_documents)} chunks ke ChromaDB (ini mungkin memakan waktu)...")
+    
+    # Ingest ke ChromaDB
+    try:
         vectorstore = Chroma.from_documents(
-            documents=docs,
-            embedding=embedding_model,
+            documents=all_documents,
+            embedding=embeddings,
             persist_directory=DB_DIR,
             collection_name=COLLECTION_NAME
         )
-        return len(docs), True
-    else:
-        vectorstore = Chroma(
-            persist_directory=DB_DIR,
-            collection_name=COLLECTION_NAME,
-            embedding_function=embedding_model
-        )
-        vectorstore.add_documents(docs)
-        return len(docs), True
-
-def main():
-    reset_database()
-
-    print(f"⚙️  Memuat Model Embedding: {EMBEDDING_MODEL_NAME}")
-    embeddings = HuggingFaceEmbeddings(
-        model_name=EMBEDDING_MODEL_NAME,
-        model_kwargs={'device': 'cuda'},
-        encode_kwargs={'normalize_embeddings': True}
-    )
-
-    if not os.path.exists(INPUT_MD_DIR):
-        print(f"❌ Folder tidak ditemukan: {INPUT_MD_DIR}")
-        return
-
-    all_files = [os.path.join(INPUT_MD_DIR, f) for f in os.listdir(INPUT_MD_DIR) if f.endswith(".md")]
-
-    if not all_files:
-        print("❌ Tidak ada file .md ditemukan.")
-        return
-
-    print(f"🚀 Memulai Ingest untuk {len(all_files)} file (Full Raw Markdown)...")
-    
-    total_chunks = 0
-    vs_exists = False
-    for file_path in tqdm(all_files, desc="Processing Files"):
-        num_chunks, vs_exists = ingest_to_database(file_path, embeddings, vs_exists)
-        total_chunks += num_chunks
-    
-    print("\n" + "="*40)
-    print(f"✅ SELESAI! Total {total_chunks} potongan teks masuk ke Database.")
-    print(f"📂 Lokasi DB: {DB_DIR}")
-    print("="*40)
+        print(f"✅ Selesai! Database disimpan di: {DB_DIR}")
+    except Exception as e:
+        print(f"❌ Gagal melakukan ingest ke ChromaDB: {e}")
 
 if __name__ == "__main__":
     main()

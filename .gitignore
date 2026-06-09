@@ -6,3 +6,6 @@
 /scripts/*/
 /vector_store
 /models
+/outputs_*/
+/unsloth_compiled_cache/
+/*.log

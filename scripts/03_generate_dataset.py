@@ -6,31 +6,54 @@ from tqdm import tqdm
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.utils.pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # =============================
 # Konfigurasi
 # =============================
-INPUT_DIR = "../data/processed/02_cleaning_markdown_text_heading/"
-OUTPUT_DIR = "../data/dataset_training_ver2/"
-DB_DIR = "../vector_store/chroma_db"
+INPUT_DIR = "data/processed/markdown_converted_from_pdf"
+OUTPUT_DIR = "data/dataset_training_ver2/"
+DB_DIR = "vector_store/chroma_db"
 COLLECTION_NAME = "ekonomi_syariah_dataset"
 EMBEDDING_MODEL = "intfloat/multilingual-e5-large"
 
-MAX_QUESTIONS_PER_FILE = 200
+MAX_QUESTIONS_PER_FILE = 500
 
 # =============================
-# Model LLM
+# Model LLM (OpenRouter)
 # =============================
-llm = ChatOllama(
-    model="qwen2.5:7b",
-    temperature=0.3, # Sedikit dinaikkan agar variasi soal lebih kreatif
-    format="json",
-    base_url="http://localhost:11434"
-)
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+BASE_URL = "https://openrouter.ai/api/v1"
+
+# Model IDs
+FREE_MODEL = "deepseek/deepseek-v4-flash:free"
+PAID_MODEL = "deepseek/deepseek-v4-flash"
+
+def get_llm(model_name):
+    return ChatOpenAI(
+        model=model_name,
+        openai_api_key=OPENROUTER_API_KEY,
+        openai_api_base=BASE_URL,
+        temperature=0.3,
+        model_kwargs={
+            "extra_headers": {
+                "HTTP-Referer": "https://github.com/alif-faturrohman/ekonomi-syariah-chatbot-llm",
+                "X-Title": "HANIF Dataset Generator"
+            }
+        }
+    )
+
+# Start with free model
+current_model = FREE_MODEL
+llm = get_llm(current_model)
+# Chain akan diinisialisasi setelah prompt dan parser didefinisikan
 
 # =============================
 # Data Structure
@@ -46,41 +69,27 @@ parser = JsonOutputParser(pydantic_object=RaftData)
 # Prompt RAFT Versi PRO (Dipertajam)
 # =============================
 raft_system_prompt = """
-Anda adalah Pakar Ekonomi Syariah yang sedang menyusun dataset untuk ujian sertifikasi.
+Anda adalah HANIF (Helpful AI for Noble Islamic Finance), seorang Pakar Ekonomi Syariah senior yang bertugas menyusun materi edukasi berkualitas tinggi.
 
 Tugas Anda:
-Diberikan sekumpulan potongan teks (dokumen), buatlah SATU pasang pertanyaan dan jawaban (QA) yang berkualitas tinggi.
+Berdasarkan dokumen referensi yang diberikan, buatlah SATU pasang pertanyaan dan jawaban (QA) yang mendalam.
+
+Gaya Bahasa & Tone:
+1. EDUKATIF & MENJELASKAN: Jangan menjawab seperti kamus yang kaku. Jawablah seperti seorang guru yang sedang menjelaskan konsep kepada muridnya dengan bahasa yang sopan, jelas, dan mudah dipahami.
+2. STRUKTUR: Jika diperlukan, gunakan poin-poin atau langkah-langkah dalam penjelasan agar informasi lebih teratur.
+3. PROFESIONAL: Gunakan terminologi Ekonomi Syariah yang tepat.
 
 Aturan Keras:
 1. Pertanyaan harus bisa dijawab HANYA menggunakan informasi yang ada di dalam teks yang diberikan.
-2. JANGAN membuat pertanyaan jika informasinya tidak lengkap atau ambigu.
-3. 'thought_process' harus berisi penalaran logis: Identifikasi mana dokumen yang relevan (Oracle) dan mana yang tidak relevan (Distractor), lalu kutip faktanya.
-4. Jawaban tidak boleh bertele-tele. Langsung pada inti persoalan.
+2. 'thought_process' harus berisi penalaran logis: Identifikasi mana dokumen yang relevan (Oracle) dan kutip faktanya, serta jelaskan kenapa dokumen lain diabaikan.
+3. DILARANG KERAS menggunakan frasa pembuka seperti "Menurut teks...", "Berdasarkan dokumen...", atau "Teks menyebutkan...". Langsung berikan penjelasan ahli Anda.
+4. JANGAN mereferensikan gambar, tabel, atau nomor halaman (misal: "lihat gambar 1", "pada halaman 20").
 
-CONTOH OUTPUT YANG DIHARAPKAN (FEW-SHOT):
-
---- Contoh 1 ---
-Input Dokumen:
-[Dokumen A]: Riba fadhl adalah tukar menukar dua barang yang sejenis dengan takaran yang berbeda...
-[Dokumen B]: Sejarah masuknya Islam ke Indonesia dimulai pada abad ke-7 masehi melalui jalur perdagangan...
-
-Output JSON:
+CONTOH OUTPUT YANG DIHARAPKAN:
 {{
-    "question": "Apa yang dimaksud dengan Riba Fadhl berdasarkan referensi?",
-    "thought_process": "Dokumen B membahas sejarah masuknya Islam, tidak relevan dengan pertanyaan fikih muamalah. Dokumen A secara spesifik mendefinisikan Riba Fadhl sebagai pertukaran barang sejenis dengan takaran berbeda. Saya akan menyusun jawaban berdasarkan Dokumen A.",
-    "answer": "Riba Fadhl adalah jenis riba yang terjadi dalam pertukaran antarbarang yang sejenis namun dengan takaran atau kadar yang berbeda."
-}}
-
---- Contoh 2 ---
-Input Dokumen:
-[Dokumen A]: Akad Murabahah adalah akad jual beli barang dengan menyatakan harga perolehan dan keuntungan (margin) yang disepakati...
-[Dokumen B]: Syarat sah shalat ada lima, yaitu suci dari hadas, menutup aurat...
-
-Output JSON:
-{{
-    "question": "Jelaskan karakteristik utama dari akad Murabahah!",
-    "thought_process": "Dokumen B menjelaskan syarat shalat (Fikih Ibadah), jadi ini adalah distractor. Dokumen A relevan karena mendefinisikan akad Murabahah. Poin kuncinya adalah 'menyatakan harga perolehan' dan 'keuntungan/margin'.",
-    "answer": "Karakteristik utama akad Murabahah adalah adanya transparansi harga perolehan barang dan kesepakatan mengenai jumlah keuntungan (margin) antara penjual dan pembeli."
+    "question": "Mengapa prinsip keadilan sangat krusial dalam akad perbankan syariah?",
+    "thought_process": "Dokumen A menjelaskan tentang etika bisnis umum, sementara Dokumen B secara spesifik membahas pilar keadilan dalam perbankan syariah sebagai antitesis dari sistem bunga. Saya akan menggunakan Dokumen B.",
+    "answer": "Prinsip keadilan merupakan fondasi utama dalam perbankan syariah karena sistem ini beroperasi atas dasar pembagian risiko dan keuntungan (risk and profit sharing). Berbeda dengan sistem konvensional, keadilan di sini memastikan bahwa tidak ada satu pihak pun yang mengeksploitasi pihak lain; jika terjadi keuntungan maka dinikmati bersama, dan jika terjadi risiko maka ditanggung sesuai porsi kesepakatan akad."
 }}
 
 Format Output Wajib JSON:
@@ -91,6 +100,9 @@ raft_prompt = ChatPromptTemplate.from_messages([
     ("system", raft_system_prompt),
     ("user", "Kumpulan Dokumen Referensi:\n{context_docs}\n\nBuat 1 soal RAFT berdasarkan referensi di atas.")
 ])
+
+# Initialize global chain after prompt and parser are ready
+chain = raft_prompt | llm | parser
 
 # =============================
 # Distractor Selection
@@ -133,7 +145,8 @@ def quality_filter(result):
 # =============================
 # Process Single File
 # =============================
-def process_single_file(file_path, filename, vectorstore, chain):
+def process_single_file(file_path, filename, vectorstore):
+    global llm, current_model, chain
     print(f"\n📂 Memproses: {filename}")
 
     clean_name = filename.replace(".md", "")
@@ -164,10 +177,26 @@ def process_single_file(file_path, filename, vectorstore, chain):
 
             try:
                 # 3. Generate Soal via LLM
-                response = chain.invoke({
-                    "context_docs": final_context_str,
-                    "format_instructions": parser.get_format_instructions()
-                })
+                try:
+                    response = chain.invoke({
+                        "context_docs": final_context_str,
+                        "format_instructions": parser.get_format_instructions()
+                    })
+                except Exception as e:
+                    # Fallback to paid model if free model fails
+                    if current_model == FREE_MODEL:
+                        print(f"\n⚠️ Free model exhausted or error: {e}. Switching to PAID model...")
+                        current_model = PAID_MODEL
+                        llm = get_llm(current_model)
+                        # Rebuild chain with new llm
+                        chain = raft_prompt | llm | parser
+                        # Retry once
+                        response = chain.invoke({
+                            "context_docs": final_context_str,
+                            "format_instructions": parser.get_format_instructions()
+                        })
+                    else:
+                        raise e
 
                 if not quality_filter(response):
                     continue
@@ -232,14 +261,15 @@ def main():
         persist_directory=DB_DIR
     )
 
-    chain = raft_prompt | llm | parser
+    print("⏳ Membuat Chain LLM...")
+    # Chain sudah didefinisikan secara global
 
     file_list = [f for f in os.listdir(INPUT_DIR) if f.endswith(".md")]
     print(f"📄 Total file: {len(file_list)}")
 
     total = 0
     for filename in file_list:
-        count = process_single_file(os.path.join(INPUT_DIR, filename), filename, vectorstore, chain)
+        count = process_single_file(os.path.join(INPUT_DIR, filename), filename, vectorstore)
         total += count
         print(f"   ✓ {filename} → {count} soal")
 

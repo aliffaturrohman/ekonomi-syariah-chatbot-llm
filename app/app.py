@@ -5,12 +5,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-
+from llm_factory import get_llm
 
 DB_DIR = "../vector_store/chroma_db"
 COLLECTION_NAME = "ekonomi_syariah_dataset"
-MODEL_NAME = "hanif-raft-v3:latest"
 EMBEDDING_MODEL = "intfloat/multilingual-e5-large"
 
 @st.cache_resource
@@ -27,11 +25,7 @@ def load_resources():
     )
     retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
     
-    llm = ChatOllama(
-        model=MODEL_NAME,
-        temperature=0.2,
-        base_url="http://localhost:11434"
-    )
+    llm = get_llm(temperature=0.2)
     
     return retriever, llm
 

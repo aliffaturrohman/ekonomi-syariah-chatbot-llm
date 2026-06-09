@@ -1,7 +1,28 @@
+import os
+# Fix for missing CUDA 13 libraries on some systems
+import ctypes
+# Get absolute path to venv relative to script location
+script_dir = os.path.dirname(os.path.abspath(__file__))
+venv_path = os.path.abspath(os.path.join(script_dir, "../venv"))
+cuda_lib_path = os.path.join(venv_path, "lib/python3.14/site-packages/nvidia/cu13/lib/libnvJitLink.so.13")
+
+if os.path.exists(cuda_lib_path):
+    try:
+        # Load the library globally so other libraries can see it
+        ctypes.CDLL(cuda_lib_path, mode=ctypes.RTLD_GLOBAL)
+    except Exception as e:
+        print(f"Warning: Could not pre-load CUDA library: {e}")
+
+# Monkey-patch Hasher to avoid dill/pickle error on Python 3.14
+try:
+    from datasets.fingerprint import Hasher
+    Hasher.hash = lambda *args, **kwargs: "dummy_hash"
+except ImportError:
+    pass
+
 from unsloth import FastLanguageModel
 import torch
-import os
-
+...
 # --- KONFIGURASI ---
 # Path tempat hasil training (LoRA) disimpan kemarin
 ADAPTER_DIR = "../models/adapters/qwen_raft_ekonomi_syariah_ver2"

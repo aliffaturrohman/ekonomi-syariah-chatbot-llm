@@ -1,11 +1,7 @@
 # graph.py
-from langchain_ollama import ChatOllama
-from langgraph.graph import StateGraph, START, END
-from typing import Annotated, List
-from typing_extensions import TypedDict
-import operator
+from llm_factory import get_llm
 
-llm = ChatOllama(model="qwen2.5:7b", temperature=0.7)
+llm = get_llm(temperature=0.7)
 
 class State(TypedDict):
     messages: Annotated[List, operator.add]

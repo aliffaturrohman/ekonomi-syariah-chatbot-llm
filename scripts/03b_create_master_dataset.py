@@ -2,7 +2,7 @@ import os
 
 # --- KONFIGURASI ---
 INPUT_DIR = "../data/dataset_training_ver2/"
-OUTPUT_FILE = "../data/dataset_training_ver2/MASTER_RAFT_DATASET.jsonl"
+OUTPUT_FILE = "../data/MASTER_RAFT_DATASET.jsonl"
 
 def main():
     print("🔄 Sedang menggabungkan semua file dataset...")
