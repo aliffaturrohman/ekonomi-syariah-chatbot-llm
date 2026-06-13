@@ -1,0 +1,99 @@
+[
+    {
+        "strategy": "strat1",
+        "lr": 0.0002,
+        "epochs": 1,
+        "rank": 16,
+        "completed_at": "Sebelumnya (Gagal - Sesi V1)",
+        "status": "Catastrophic Collapse (Gibberish)"
+    },
+    {
+        "strategy": "strat3",
+        "lr": 0.0002,
+        "epochs": 1,
+        "rank": 16,
+        "completed_at": "Sebelumnya (Selesai - Sesi V1)",
+        "status": "Selesai (Original V1)"
+    },
+    {
+        "strategy": "strat1",
+        "lr": 5e-05,
+        "epochs": 2,
+        "rank": 16,
+        "completed_at": "Sebelumnya (Sukses - Sesi V2)",
+        "status": "Sembuh, Penalaran CoT Muncul"
+    },
+    {
+        "strategy": "strat2",
+        "lr": 5e-05,
+        "epochs": 2,
+        "rank": 16,
+        "completed_at": "Sebelumnya (Sukses - Sesi V2)",
+        "status": "Sembuh, Penalaran CoT Muncul"
+    },
+    {
+        "strategy": "strat3",
+        "lr": 5e-05,
+        "epochs": 2,
+        "rank": 16,
+        "completed_at": "Sebelumnya (Sukses - Sesi V2)",
+        "status": "Sembuh, Penalaran CoT Muncul"
+    },
+    {
+        "strategy": "strat1",
+        "lr": 2e-05,
+        "epochs": 3,
+        "rank": 32,
+        "completed_at": "Sebelumnya (Optimal - Sesi V3)",
+        "status": "Sukses"
+    },
+    {
+        "strategy": "strat2",
+        "lr": 2e-05,
+        "epochs": 3,
+        "rank": 32,
+        "completed_at": "Sebelumnya (Optimal - Sesi V3)",
+        "status": "Sukses (Strategi Terbaik)"
+    },
+    {
+        "strategy": "strat3",
+        "lr": 2e-05,
+        "epochs": 3,
+        "rank": 32,
+        "completed_at": "Sebelumnya (Optimal - Sesi V3)",
+        "status": "Sukses (Setelah Retry)"
+    },
+    {
+        "strategy": "strat1",
+        "lr": 2e-05,
+        "epochs": 3,
+        "rank": 64,
+        "description": "Sesi V4: Eksperimen LoRA Rank lebih tinggi (64) untuk peningkatan kapasitas memori domain pada Strat 1",
+        "completed_at": "2026-06-09 11:45:33",
+        "status": "Sukses",
+        "param_tag": "final_r64_lr2e5_ep3_20260609_1009",
+        "timestamp": "20260609_1009"
+    },
+    {
+        "strategy": "strat1",
+        "lr": 2e-05,
+        "epochs": 4,
+        "rank": 32,
+        "description": "Sesi V5: Eksperimen Epoch lebih banyak (4) dengan Rank 32 untuk Strat 1",
+        "completed_at": "2026-06-09 15:52:15",
+        "status": "Sukses",
+        "param_tag": "final_r32_lr2e5_ep4_20260609_1346",
+        "timestamp": "20260609_1346"
+    },
+    {
+        "strategy": "strat2",
+        "lr": 2e-05,
+        "epochs": 4,
+        "rank": 32,
+        "description": "Sesi V5: Eksperimen Epoch lebih banyak (4) dengan Rank 32 untuk Strat 2",
+        "completed_at": "2026-06-09 17:57:37",
+        "status": "Sukses",
+        "param_tag": "final_r32_lr2e5_ep4_20260609_1552",
+        "timestamp": "20260609_1552"
+    }
+]

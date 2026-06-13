@@ -50,3 +50,17 @@ Evaluasi final menggunakan juri eksternal **DeepSeek v4 Flash via OpenRouter** t
 - **Patch Kompatibilitas Python 3.14 (Auto-Patcher):**
     - Agar kompatibilitas ini tidak hilang/terhapus ketika proyek dipindahkan atau di-clone ke komputer lain (misalnya server GPU yang lebih besar), kami telah membuat skrip otomatisasi **[patch_datasets.py](file:///home/alif-faturrohman/coding/ekonomi-syariah-chatbot-llm/scripts/patch_datasets.py)**.
     - Skrip ini akan dipanggil secara otomatis di awal eksekusi program training (`04_train_model.py`) dan evaluasi (`07_run_ragas_evaluation.py`). Skrip akan memeriksa apakah file `_dill.py` di dalam virtual environment lokal memiliki signature yang tepat, lalu menerapkannya secara dinamis menggunakan parameter variadik (`*args, **kwargs`). Hashing dataset kini berjalan secara portabel tanpa memerlukan intervensi manual lagi.
+
+## 7. Temuan Eksperimen Rank 64 (Sesi V4)
+*Update: Selasa, 9 Juni 2026, 13:45 WIB*
+- **Rank 64 vs Rank 32:** 
+    - **Strat 1 (Pure Aug):** Berhasil diselesaikan dengan Rank 64. Peningkatan Rank memberikan kapasitas memori yang lebih besar untuk data hasil augmentasi.
+    - **Strat 2 & 3 (Cross & Dual):** Mengalami **CUDA Out of Memory (OOM)**. 
+- **Analisis Memori:** Strategi yang melibatkan konteks dokumen panjang (Cross-document & Dual) tidak kompatibel dengan LoRA Rank 64 pada GPU VRAM 12GB (RTX 3060). Beban memori untuk menyimpan gradien pada rank yang lebih tinggi melampaui sisa VRAM yang tersedia setelah alokasi model dasar dan konteks.
+- **Kesimpulan:** Rank 32 adalah batas optimal untuk stabilitas training di environment hardware saat ini untuk seluruh strategi.
+
+## 8. Temuan Eksperimen Epoch 4 (Sesi V5)
+*Update: Selasa, 9 Juni 2026, 19:45 WIB*
+- **Strat 1 & 2 (Rank 32, Ep 4):** **SUKSES**. Penambahan epoch menjadi 4 meningkatkan pemahaman model pada dataset Pure Augmentation dan Cross-document.
+- **Strat 3 (Rank 32, Ep 4):** Mengalami **CUDA Out of Memory (OOM)**. 
+- **Analisis:** Dataset Strat 3 (Dual Sync) memiliki jumlah baris dua kali lipat (~2300 baris) dan rata-rata panjang konteks yang lebih besar. Meskipun Rank sudah diturunkan ke 32, kombinasi Epoch 4 dan Context 2048 melebihi batas 12GB VRAM saat proses evaluasi internal/checkpointing.
