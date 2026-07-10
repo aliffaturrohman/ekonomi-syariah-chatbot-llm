@@ -45,7 +45,8 @@
         "epochs": 3,
         "rank": 32,
         "completed_at": "Sebelumnya (Optimal - Sesi V3)",
-        "status": "Sukses"
+        "status": "Sukses",
+        "param_tag": "strat1_final_r32_lr2e5_ep3_20260604_1730"
     },
     {
         "strategy": "strat2",
@@ -53,7 +54,8 @@
         "epochs": 3,
         "rank": 32,
         "completed_at": "Sebelumnya (Optimal - Sesi V3)",
-        "status": "Sukses (Strategi Terbaik)"
+        "status": "Sukses (Strategi Terbaik)",
+        "param_tag": "strat2_final_r32_lr2e5_ep3_20260604_1905"
     },
     {
         "strategy": "strat3",
@@ -61,7 +63,8 @@
         "epochs": 3,
         "rank": 32,
         "completed_at": "Sebelumnya (Optimal - Sesi V3)",
-        "status": "Sukses (Setelah Retry)"
+        "status": "Sukses",
+        "param_tag": "strat3_final_r32_lr2e5_ep3_20260604_2145"
     },
     {
         "strategy": "strat1",

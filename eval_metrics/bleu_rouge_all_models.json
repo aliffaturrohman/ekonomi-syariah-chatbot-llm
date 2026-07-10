@@ -1,0 +1,106 @@
+[
+  {
+    "model": "deepseek_v4_flash_strat1",
+    "n_samples": 291,
+    "bleu3": 0.0464,
+    "bleu4": 0.0263,
+    "bleu5": 0.0161,
+    "rougeL": 0.1462
+  },
+  {
+    "model": "deepseek_v4_flash_strat2",
+    "n_samples": 291,
+    "bleu3": 0.1158,
+    "bleu4": 0.0811,
+    "bleu5": 0.0579,
+    "rougeL": 0.2521
+  },
+  {
+    "model": "deepseek_v4_flash_strat3",
+    "n_samples": 291,
+    "bleu3": 0.0451,
+    "bleu4": 0.0254,
+    "bleu5": 0.0156,
+    "rougeL": 0.1459
+  },
+  {
+    "model": "final_r32_lr2e5_ep4_20260609_1346",
+    "n_samples": 291,
+    "bleu3": 0.0952,
+    "bleu4": 0.0584,
+    "bleu5": 0.0376,
+    "rougeL": 0.2254
+  },
+  {
+    "model": "final_r32_lr2e5_ep4_20260609_1552",
+    "n_samples": 291,
+    "bleu3": 0.121,
+    "bleu4": 0.0782,
+    "bleu5": 0.0524,
+    "rougeL": 0.2695
+  },
+  {
+    "model": "final_r64_lr2e5_ep3_20260609_1009",
+    "n_samples": 291,
+    "bleu3": 0.0987,
+    "bleu4": 0.0611,
+    "bleu5": 0.0395,
+    "rougeL": 0.2301
+  },
+  {
+    "model": "strat1_final_r32_lr2e5_ep3_20260604_1730",
+    "n_samples": 291,
+    "bleu3": 0.0981,
+    "bleu4": 0.0598,
+    "bleu5": 0.0387,
+    "rougeL": 0.2282
+  },
+  {
+    "model": "strat1_lr5e5_ep2_20260602_1659",
+    "n_samples": 291,
+    "bleu3": 0.1041,
+    "bleu4": 0.0639,
+    "bleu5": 0.042,
+    "rougeL": 0.2379
+  },
+  {
+    "model": "strat2_final_r32_lr2e5_ep3_20260604_1905",
+    "n_samples": 291,
+    "bleu3": 0.1222,
+    "bleu4": 0.0796,
+    "bleu5": 0.0544,
+    "rougeL": 0.268
+  },
+  {
+    "model": "strat2_lr5e5_ep2_20260602_1802",
+    "n_samples": 291,
+    "bleu3": 0.1554,
+    "bleu4": 0.1058,
+    "bleu5": 0.0748,
+    "rougeL": 0.3048
+  },
+  {
+    "model": "strat3_final_r32_lr2e5_ep3_20260604_2145",
+    "n_samples": 291,
+    "bleu3": 0.0894,
+    "bleu4": 0.0543,
+    "bleu5": 0.0354,
+    "rougeL": 0.2183
+  },
+  {
+    "model": "strat3_lr2e4_ep1_original",
+    "n_samples": 291,
+    "bleu3": 0.1034,
+    "bleu4": 0.0639,
+    "bleu5": 0.0415,
+    "rougeL": 0.2409
+  },
+  {
+    "model": "strat3_lr5e5_ep2_20260604_0943",
+    "n_samples": 291,
+    "bleu3": 0.1093,
+    "bleu4": 0.0692,
+    "bleu5": 0.0465,
+    "rougeL": 0.2412
+  }
+]
