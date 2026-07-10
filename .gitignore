@@ -16,4 +16,8 @@ __pycache__/
 /models
 /outputs_*/
 /unsloth_compiled_cache/
+/_unsloth_sentencepiece_temp/
+/.antigravitycli/
+/.vscode/
+/logs/
 /*.log
